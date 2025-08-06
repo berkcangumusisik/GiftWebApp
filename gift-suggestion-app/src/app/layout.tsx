@@ -35,10 +35,7 @@ export default function RootLayout({
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/10 via-pink-600/10 to-indigo-600/10 animate-pulse"></div>
           {/* Grid pattern */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
-          {/* Add padding top for fixed navbar */}
-          <div className="pt-16">
-            {children}
-          </div>
+          {children}
         </main>
       </body>
     </html>

@@ -24,13 +24,13 @@ export default function Navbar() {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="#features" className="text-gray-300 hover:text-white transition-colors duration-200 font-medium">
+            <Link href="/#features" className="text-gray-300 hover:text-white transition-colors duration-200 font-medium">
               Özellikler
             </Link>
-            <Link href="#how-it-works" className="text-gray-300 hover:text-white transition-colors duration-200 font-medium">
+            <Link href="/#how-it-works" className="text-gray-300 hover:text-white transition-colors duration-200 font-medium">
               Nasıl Çalışır
             </Link>
-            <Link href="#pricing" className="text-gray-300 hover:text-white transition-colors duration-200 font-medium">
+            <Link href="/#pricing" className="text-gray-300 hover:text-white transition-colors duration-200 font-medium">
               Fiyatlar
             </Link>
             <Link 
@@ -59,21 +59,21 @@ export default function Navbar() {
         <div className={`md:hidden transition-all duration-300 overflow-hidden ${isMenuOpen ? 'max-h-64 pb-4' : 'max-h-0'}`}>
           <div className="pt-4 space-y-4">
             <Link 
-              href="#features" 
+              href="/#features" 
               className="block text-gray-300 hover:text-white transition-colors duration-200 font-medium py-2"
               onClick={() => setIsMenuOpen(false)}
             >
               Özellikler
             </Link>
             <Link 
-              href="#how-it-works" 
+              href="/#how-it-works" 
               className="block text-gray-300 hover:text-white transition-colors duration-200 font-medium py-2"
               onClick={() => setIsMenuOpen(false)}
             >
               Nasıl Çalışır
             </Link>
             <Link 
-              href="#pricing" 
+              href="/#pricing" 
               className="block text-gray-300 hover:text-white transition-colors duration-200 font-medium py-2"
               onClick={() => setIsMenuOpen(false)}
             >

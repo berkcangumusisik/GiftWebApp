@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-// OpenAI istemcisi yapılandırması
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// OpenAI istemcisi yapılandırması - sadece API key varsa oluştur
+let openai: OpenAI | null = null;
+
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 // Form verileri interface'i
 interface FormData {
@@ -86,6 +90,10 @@ Sadece JSON formatında yanıt ver, başka açıklama yapma.`;
 
 // OpenAI API çağrısı için yardımcı fonksiyon
 async function generateGiftSuggestions(formData: FormData): Promise<GiftSuggestion[]> {
+  if (!openai) {
+    throw new Error('OpenAI client not initialized');
+  }
+
   try {
     const prompt = createPersonalizedPrompt(formData);
     
@@ -174,9 +182,11 @@ export async function POST(request: NextRequest) {
 
 // GET endpoint - API durumu kontrolü
 export async function GET() {
+  const isConfigured = !!process.env.OPENAI_API_KEY && !!openai;
+  
   return NextResponse.json({
     status: 'OK',
-    isConfigured: !!process.env.OPENAI_API_KEY,
+    isConfigured: isConfigured,
     model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo'
   });
 }

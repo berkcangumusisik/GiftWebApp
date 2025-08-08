@@ -1,6 +1,8 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { type GiftSuggestion } from '@/lib/openai';
+import { FavoritesManager } from '@/lib/favorites';
 
 interface OpenAIGiftSuggestionsProps {
   suggestions: GiftSuggestion[];
@@ -17,6 +19,83 @@ interface OpenAIGiftSuggestionsProps {
 }
 
 export default function OpenAIGiftSuggestions({ suggestions, requestData, onNewSearch }: OpenAIGiftSuggestionsProps) {
+  const [favoriteGifts, setFavoriteGifts] = useState<Set<string>>(new Set());
+  const [isAddingToFavorites, setIsAddingToFavorites] = useState<Set<string>>(new Set());
+  const [showSuccessMessage, setShowSuccessMessage] = useState<string | null>(null);
+
+  // Load favorites on component mount
+  useEffect(() => {
+    const favorites = FavoritesManager.getFavorites();
+    const favoriteKeys = new Set(
+      favorites.map(fav => `${fav.name}_${fav.category}`)
+    );
+    setFavoriteGifts(favoriteKeys);
+  }, []);
+
+  const handleAddToFavorites = async (gift: GiftSuggestion) => {
+    const giftKey = `${gift.name}_${gift.category}`;
+    setIsAddingToFavorites(prev => new Set([...prev, giftKey]));
+
+    try {
+      const success = FavoritesManager.addToFavorites({
+        name: gift.name,
+        description: gift.description,
+        price: gift.price,
+        category: gift.category,
+        emoji: gift.emoji || '🎁',
+        where: gift.where,
+        whyPerfect: gift.whyPerfect,
+        rating: gift.rating,
+        forPerson: requestData.recipient,
+        occasion: requestData.occasion
+      });
+
+      if (success) {
+        setFavoriteGifts(prev => new Set([...prev, giftKey]));
+        setShowSuccessMessage(`"${gift.name}" favorilere eklendi! ❤️`);
+        setTimeout(() => setShowSuccessMessage(null), 3000);
+      } else {
+        setShowSuccessMessage(`"${gift.name}" zaten favorilerinizde! 💫`);
+        setTimeout(() => setShowSuccessMessage(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error adding to favorites:', error);
+      setShowSuccessMessage('Favorilere eklerken bir hata oluştu 😞');
+      setTimeout(() => setShowSuccessMessage(null), 3000);
+    } finally {
+      setIsAddingToFavorites(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(giftKey);
+        return newSet;
+      });
+    }
+  };
+
+  const handleRemoveFromFavorites = async (gift: GiftSuggestion) => {
+    try {
+      const favorites = FavoritesManager.getFavorites();
+      const favoriteToRemove = favorites.find(fav => 
+        fav.name === gift.name && fav.category === gift.category
+      );
+
+      if (favoriteToRemove) {
+        FavoritesManager.removeFromFavorites(favoriteToRemove.id);
+        const giftKey = `${gift.name}_${gift.category}`;
+        setFavoriteGifts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(giftKey);
+          return newSet;
+        });
+        setShowSuccessMessage(`"${gift.name}" favorilerden çıkarıldı! 💔`);
+        setTimeout(() => setShowSuccessMessage(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error removing from favorites:', error);
+      setShowSuccessMessage('Favorilerden çıkarırken bir hata oluştu 😞');
+      setTimeout(() => setShowSuccessMessage(null), 3000);
+    }
+  };
+
   const getCategoryIcon = (category: string) => {
     const icons: Record<string, string> = {
       'Lifestyle': '🏠',
@@ -116,6 +195,16 @@ export default function OpenAIGiftSuggestions({ suggestions, requestData, onNewS
           )}
         </div>
 
+        {/* Success Message */}
+        {showSuccessMessage && (
+          <div className="fixed top-20 right-4 z-50 bg-green-900/90 backdrop-blur-sm border border-green-500/30 rounded-lg p-4 shadow-xl animate-in slide-in-from-right duration-300">
+            <div className="flex items-center space-x-2">
+              <span className="text-green-400">✅</span>
+              <span className="text-green-100 font-medium">{showSuccessMessage}</span>
+            </div>
+          </div>
+        )}
+
         {/* AI Powered Badge */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-full px-4 py-2">
@@ -154,9 +243,47 @@ export default function OpenAIGiftSuggestions({ suggestions, requestData, onNewS
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
+                
+                <div className="flex flex-col items-end space-y-2">
                   <div className="text-lg font-bold text-green-400">{gift.price}</div>
                   {gift.rating && renderStars(gift.rating)}
+                  
+                  {/* Favorite Button */}
+                  <div className="flex items-center space-x-2">
+                    {favoriteGifts.has(`${gift.name}_${gift.category}`) ? (
+                      <button
+                        onClick={() => handleRemoveFromFavorites(gift)}
+                        className="group/btn flex items-center space-x-1 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 hover:border-red-400/50 rounded-full transition-all duration-200"
+                        title="Favorilerden çıkar"
+                      >
+                        <span className="text-red-400 group-hover/btn:text-red-300">💔</span>
+                        <span className="text-red-300 text-xs font-medium">Favoride</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleAddToFavorites(gift)}
+                        disabled={isAddingToFavorites.has(`${gift.name}_${gift.category}`)}
+                        className={`group/btn flex items-center space-x-1 px-3 py-1.5 border rounded-full transition-all duration-200 ${
+                          isAddingToFavorites.has(`${gift.name}_${gift.category}`)
+                            ? 'bg-gray-500/20 border-gray-400/30 cursor-not-allowed'
+                            : 'bg-pink-500/20 hover:bg-pink-500/30 border-pink-400/30 hover:border-pink-400/50'
+                        }`}
+                        title="Favorilere ekle"
+                      >
+                        {isAddingToFavorites.has(`${gift.name}_${gift.category}`) ? (
+                          <>
+                            <span className="animate-spin text-gray-400">⏳</span>
+                            <span className="text-gray-400 text-xs font-medium">Ekleniyor...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-pink-400 group-hover/btn:text-pink-300">❤️</span>
+                            <span className="text-pink-300 text-xs font-medium">Favorile</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -200,6 +327,15 @@ export default function OpenAIGiftSuggestions({ suggestions, requestData, onNewS
           >
             🔄 Yeni AI Analizi Yap
           </button>
+
+          <button
+            onClick={() => {
+              window.location.href = '/favorites';
+            }}
+            className="px-8 py-4 bg-gradient-to-r from-pink-600 to-red-600 text-white font-semibold rounded-xl hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-pink-500/25"
+          >
+            ❤️ Favorilerim ({FavoritesManager.getFavoritesCount()})
+          </button>
           
           <button
             onClick={() => window.print()}
@@ -213,7 +349,8 @@ export default function OpenAIGiftSuggestions({ suggestions, requestData, onNewS
               const suggestionsList = suggestions.map(gift => `${gift.name} - ${gift.price}`).join('\n');
               const text = `${requestData.recipient} için AI hediye önerileri:\n\n${suggestionsList}`;
               navigator.clipboard.writeText(text);
-              alert('AI hediye listesi panoya kopyalandı!');
+              setShowSuccessMessage('AI hediye listesi panoya kopyalandı! 📋');
+              setTimeout(() => setShowSuccessMessage(null), 3000);
             }}
             className="px-8 py-4 bg-slate-700/50 text-gray-300 font-semibold rounded-xl border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-200"
           >

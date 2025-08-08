@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import GiftForm from '@/components/GiftForm';
-import GiftSuggestions from '@/components/GiftSuggestions';
 import DummyGiftSuggestions from '@/components/DummyGiftSuggestions';
 import OpenAIGiftSuggestions from '@/components/OpenAIGiftSuggestions';
 import GiftFormFeatures from '@/components/GiftFormFeatures';
@@ -50,10 +49,17 @@ export default function RecommendPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
 
-  const handleFormSubmit = async (formData: FormData) => {
+  const handleFormSubmit = async (formData: FormData, isRetryAttempt = false) => {
+    if (!isRetryAttempt) {
+      setRetryCount(0);
+    }
+    
     setIsLoading(true);
     setError(null);
+    setIsRetrying(isRetryAttempt);
 
     try {
       // OpenAI yapılandırmasını kontrol et
@@ -71,6 +77,7 @@ export default function RecommendPage() {
         };
 
         setResult(aiResult);
+        setRetryCount(0); // Reset retry count on success
       } else {
         // Dummy data kullan
         await new Promise(resolve => setTimeout(resolve, 2000)); // 2 saniye bekle
@@ -86,9 +93,48 @@ export default function RecommendPage() {
 
     } catch (err) {
       console.error('API Error:', err);
-      setError('Hediye önerisi oluşturulurken bir hata oluştu: ' + (err as Error).message);
+      const errorMessage = (err as Error).message;
+      
+      // Belirli hata türlerine göre farklı mesajlar
+      let userFriendlyError = '';
+      if (errorMessage.includes('429')) {
+        userFriendlyError = '🚫 OpenAI API kotanız dolmuş. Demo modunda devam edebilir veya kotanızı yenileyebilirsiniz.';
+      } else if (errorMessage.includes('401')) {
+        userFriendlyError = '🔑 API anahtarı geçersiz. Lütfen ayarlarınızı kontrol edin.';
+      } else if (errorMessage.includes('Network')) {
+        userFriendlyError = '🌐 Bağlantı hatası. İnternet bağlantınızı kontrol edin.';
+      } else {
+        userFriendlyError = '❌ Hediye önerisi oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.';
+      }
+      
+      setError(userFriendlyError);
+      
+      // Auto-fallback to demo mode for quota exceeded errors
+      if (errorMessage.includes('429') && retryCount === 0) {
+        setTimeout(async () => {
+          setError('🤖 Demo moduna geçiliyor...');
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          const mockResult: ApiResponse = {
+            success: true,
+            requestData: formData,
+            isOpenAI: false
+          };
+          
+          setResult(mockResult);
+          setError(null);
+        }, 2000);
+      }
     } finally {
       setIsLoading(false);
+      setIsRetrying(false);
+    }
+  };
+
+  const handleRetry = () => {
+    if (result && result.requestData) {
+      setRetryCount(prev => prev + 1);
+      handleFormSubmit(result.requestData, true);
     }
   };
 
@@ -117,27 +163,94 @@ export default function RecommendPage() {
         {error && (
           <div className="container mx-auto px-4 pt-8">
             <div className="max-w-2xl mx-auto mb-6">
-              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 backdrop-blur-sm">
-                <div className="flex items-center">
+              <div className={`border rounded-lg p-4 backdrop-blur-sm ${
+                error.includes('Demo moduna geçiliyor') 
+                  ? 'bg-blue-900/20 border-blue-500/30' 
+                  : 'bg-red-900/20 border-red-500/30'
+              }`}>
+                <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    {error.includes('Demo moduna geçiliyor') ? (
+                      <div className="animate-spin text-blue-400 text-xl">🤖</div>
+                    ) : (
+                      <svg className="h-5 w-5 text-red-400 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
+                    )}
                   </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-300">Hata Oluştu</h3>
-                    <p className="mt-1 text-sm text-red-200">{error}</p>
+                  <div className="ml-3 flex-1">
+                    <h3 className={`text-sm font-medium ${
+                      error.includes('Demo moduna geçiliyor') ? 'text-blue-300' : 'text-red-300'
+                    }`}>
+                      {error.includes('Demo moduna geçiliyor') ? 'Sistem Bilgisi' : 'Hata Oluştu'}
+                    </h3>
+                    <p className={`mt-1 text-sm ${
+                      error.includes('Demo moduna geçiliyor') ? 'text-blue-200' : 'text-red-200'
+                    }`}>
+                      {error}
+                    </p>
+                    
+                    {/* Retry and Demo Mode Buttons */}
+                    {!error.includes('Demo moduna geçiliyor') && (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {result && result.requestData && (
+                          <button
+                            onClick={handleRetry}
+                            disabled={isRetrying}
+                            className="inline-flex items-center px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isRetrying ? (
+                              <>
+                                <span className="animate-spin mr-2">⏳</span>
+                                Tekrar deneniyor...
+                              </>
+                            ) : (
+                              <>
+                                🔄 Tekrar Dene
+                                {retryCount > 0 && ` (${retryCount + 1})`}
+                              </>
+                            )}
+                          </button>
+                        )}
+                        
+                        {error.includes('429') && (
+                          <button
+                            onClick={() => {
+                              if (result && result.requestData) {
+                                const mockResult: ApiResponse = {
+                                  success: true,
+                                  requestData: result.requestData,
+                                  isOpenAI: false
+                                };
+                                setResult(mockResult);
+                                setError(null);
+                              }
+                            }}
+                            className="inline-flex items-center px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-300 text-sm font-medium rounded-md transition-colors"
+                          >
+                            🤖 Demo Moduna Geç
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
+                  
+                  {!error.includes('Demo moduna geçiliyor') && (
                   <div className="ml-auto pl-3">
                     <button
                       onClick={() => setError(null)}
-                      className="inline-flex text-red-400 hover:text-red-300"
+                        className={`inline-flex ${
+                          error.includes('Demo moduna geçiliyor') 
+                            ? 'text-blue-400 hover:text-blue-300' 
+                            : 'text-red-400 hover:text-red-300'
+                        }`}
                     >
                       <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                       </svg>
                     </button>
                   </div>
+                  )}
                 </div>
               </div>
             </div>

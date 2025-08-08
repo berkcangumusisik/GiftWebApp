@@ -34,6 +34,13 @@ export default function Navbar() {
               Fiyatlar
             </Link>
             <Link 
+              href="/favorites" 
+              className="text-gray-300 hover:text-pink-400 transition-colors duration-200 font-medium flex items-center space-x-1"
+            >
+              <span>❤️</span>
+              <span>Favorilerim</span>
+            </Link>
+            <Link 
               href="/recommend" 
               className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white px-6 py-2 rounded-xl font-semibold hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
             >
@@ -56,7 +63,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile Menu */}
-        <div className={`md:hidden transition-all duration-300 overflow-hidden ${isMenuOpen ? 'max-h-64 pb-4' : 'max-h-0'}`}>
+        <div className={`md:hidden transition-all duration-300 overflow-hidden ${isMenuOpen ? 'max-h-80 pb-4' : 'max-h-0'}`}>
           <div className="pt-4 space-y-4">
             <Link 
               href="/#features" 
@@ -78,6 +85,14 @@ export default function Navbar() {
               onClick={() => setIsMenuOpen(false)}
             >
               Fiyatlar
+            </Link>
+            <Link 
+              href="/favorites" 
+              className="block text-gray-300 hover:text-pink-400 transition-colors duration-200 font-medium py-2 flex items-center space-x-2"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <span>❤️</span>
+              <span>Favorilerim</span>
             </Link>
             <Link 
               href="/recommend" 

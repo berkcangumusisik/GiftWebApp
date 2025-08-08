@@ -212,7 +212,7 @@ export default function GiftForm({ onSubmit, isLoading }: GiftFormProps) {
             <button
               type="submit"
               disabled={isLoading || isSubmitting}
-              className={`w-full py-4 px-6 rounded-lg font-semibold text-white transition-all duration-200 ${
+              className={`w-full py-4 px-6 rounded-lg font-semibold text-white transition-all duration-200 relative overflow-hidden ${
                 isLoading || isSubmitting
                   ? 'bg-gray-600 cursor-not-allowed'
                   : 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 active:scale-95 shadow-lg hover:shadow-blue-500/25'
@@ -220,11 +220,27 @@ export default function GiftForm({ onSubmit, isLoading }: GiftFormProps) {
             >
               {isLoading || isSubmitting ? (
                 <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  🤖 Mükemmel hediyeler bulunuyor...
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-sm font-medium">🤖 AI Analiz Ediliyor...</span>
+                    <span className="text-xs opacity-75 mt-1">Bu işlem 10-30 saniye sürebilir</span>
+                  </div>
                 </div>
               ) : (
-                '🎁 Hediye Önerilerimi Göster!'
+                <div className="flex items-center justify-center space-x-2">
+                  <span className="text-xl">🎁</span>
+                  <span>Hediye Önerilerimi Göster!</span>
+                  <span className="text-xl">✨</span>
+                </div>
+              )}
+              
+              {/* Loading Progress Bar */}
+              {(isLoading || isSubmitting) && (
+                <div className="absolute bottom-0 left-0 h-1 bg-white/20 w-full">
+                  <div className="h-full bg-white/60 animate-pulse" style={{
+                    animation: 'loading-bar 3s ease-in-out infinite'
+                  }}></div>
+                </div>
               )}
             </button>
           </Form>
